@@ -35,6 +35,29 @@
         letter-spacing: 1px;
       }
 
+      #playerScore {
+        transition: all 0.3s ease;
+      }
+
+      #computerScore {
+        transition: all 0.3s ease;
+      }
+
+      .score-flash {
+        animation: scoreFlash 0.6s ease-out;
+      }
+
+      @keyframes scoreFlash {
+        0% {
+          transform: scale(1.5);
+          text-shadow: 0 0 20px currentColor;
+        }
+        100% {
+          transform: scale(1);
+          text-shadow: none;
+        }
+      }
+
       canvas {
         display: block;
         width: 800px;
@@ -49,8 +72,8 @@
   <body>
     <div class="game-box">
       <div class="scoreboard">
-        <span>Jogador: <strong id="playerScore">0</strong></span>
-        <span>Computador: <strong id="computerScore">0</strong></span>
+        <span style="color: #00ff88;">Jogador: <strong id="playerScore">0</strong></span>
+        <span style="color: #ff006e;">Computador: <strong id="computerScore">0</strong></span>
       </div>
 
       <canvas id="gameCanvas" width="800" height="500"></canvas>
@@ -99,6 +122,8 @@
 
       let playerScore = 0;
       let computerScore = 0;
+      let scoreFlashPlayer = 0;
+      let scoreFlashComputer = 0;
 
       function resetBall(direction = 1) {
         ball.x = canvas.width / 2;
@@ -194,12 +219,20 @@
         if (ball.x - ball.radius < 0) {
           computerScore++;
           computerScoreEl.textContent = computerScore;
+          scoreFlashComputer = 60;
+          computerScoreEl.classList.remove("score-flash");
+          void computerScoreEl.offsetWidth;
+          computerScoreEl.classList.add("score-flash");
           resetBall(1);
         }
 
         if (ball.x + ball.radius > canvas.width) {
           playerScore++;
           playerScoreEl.textContent = playerScore;
+          scoreFlashPlayer = 60;
+          playerScoreEl.classList.remove("score-flash");
+          void playerScoreEl.offsetWidth;
+          playerScoreEl.classList.add("score-flash");
           resetBall(-1);
         }
       }
@@ -214,14 +247,32 @@
         handleWallCollision();
         handlePaddleCollision();
         checkScoring();
+
+        scoreFlashPlayer = Math.max(0, scoreFlashPlayer - 1);
+        scoreFlashComputer = Math.max(0, scoreFlashComputer - 1);
       }
 
       function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = "#0e1424";
+        // Fundo com efeito de cor quando há ponto
+        let bgColor = "#0e1424";
+        if (scoreFlashPlayer > 30) {
+          const intensity = (scoreFlashPlayer - 30) / 30;
+          ctx.fillStyle = `rgba(0, 255, 136, ${intensity * 0.15})`;
+          ctx.fillRect(0, 0, canvas.width / 2, canvas.height);
+          bgColor = "#0e1424";
+        }
+        if (scoreFlashComputer > 30) {
+          const intensity = (scoreFlashComputer - 30) / 30;
+          ctx.fillStyle = `rgba(255, 0, 110, ${intensity * 0.15})`;
+          ctx.fillRect(canvas.width / 2, 0, canvas.width / 2, canvas.height);
+        }
+
+        ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Linha central
         ctx.strokeStyle = "rgba(255,255,255,0.35)";
         ctx.setLineDash([12, 12]);
         ctx.beginPath();
@@ -230,14 +281,40 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        ctx.fillStyle = "#ffffff";
+        // Raquete esquerda (cor dinâmica)
+        if (scoreFlashPlayer > 0) {
+          const intensity = scoreFlashPlayer / 60;
+          ctx.fillStyle = `rgb(0, ${255 * intensity}, ${136 * intensity})`;
+          ctx.shadowColor = `rgba(0, 255, 136, ${intensity * 0.8})`;
+          ctx.shadowBlur = 20;
+        } else {
+          ctx.fillStyle = "#ffffff";
+          ctx.shadowColor = "transparent";
+        }
         ctx.fillRect(leftPaddle.x, leftPaddle.y, leftPaddle.width, leftPaddle.height);
-        ctx.fillRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height);
+        ctx.shadowBlur = 0;
 
+        // Raquete direita (cor dinâmica)
+        if (scoreFlashComputer > 0) {
+          const intensity = scoreFlashComputer / 60;
+          ctx.fillStyle = `rgb(${255 * intensity}, 0, ${110 * intensity})`;
+          ctx.shadowColor = `rgba(255, 0, 110, ${intensity * 0.8})`;
+          ctx.shadowBlur = 20;
+        } else {
+          ctx.fillStyle = "#ffffff";
+          ctx.shadowColor = "transparent";
+        }
+        ctx.fillRect(rightPaddle.x, rightPaddle.y, rightPaddle.width, rightPaddle.height);
+        ctx.shadowBlur = 0;
+
+        // Bola
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
         ctx.fillStyle = "#ffd166";
+        ctx.shadowColor = "rgba(255, 209, 102, 0.5)";
+        ctx.shadowBlur = 15;
         ctx.fill();
+        ctx.shadowBlur = 0;
       }
 
       function gameLoop() {
